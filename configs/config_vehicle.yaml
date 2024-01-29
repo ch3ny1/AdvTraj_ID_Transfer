@@ -1,0 +1,76 @@
+world:
+  map: Town05_Opt
+  fixed_delta_seconds: 0.10
+
+simulation:
+  host: 'localhost'
+  port: 2000
+  max_frame: 220
+  lr: 0.1
+  iter: 5
+
+output_settings:
+  img_dir: E:\\ID-Switch-Sim-Output\\vehicle\\imgs
+  bbox_dir: E:\\ID-Switch-Sim-Output\\vehicle\\bboxes
+  config_dir: E:\\ID-Switch-Sim-Output\\vehicle\\configs
+  traj_dir: E:\\ID-Switch-Sim-Output\\vehicle\\trajs
+
+ego_vehicle:
+  blueprint: vehicle.tesla.model3
+  spawn_transform:
+  - -3.0
+  - -49.
+  - 0.25
+  - 0
+  - 90.
+  - 0.
+  init_speed:
+  - 1.8 # x-axis
+  - 0. # y-axis
+  - 0. # z-axis
+
+victim:
+  blueprint: vehicle.mercedes.sprinter
+  spawn_transform:
+  - 24.0 # x
+  - -0.9 # y
+  - 0.2 # z
+  - 0. # pitch
+  - 180. # yaw
+  - 0. # roll
+  init_speed: 3.0 # m/s
+
+attacker:
+  blueprint: vehicle.carlamotors.carlacola
+  spawn_transform:
+  - 32.0 # x
+  - -4.5 # y
+  - 0.2 # z
+  - 0. # pitch
+  - 180. # yaw
+  - 0. # roll
+    
+surveillance_camera:
+  transform:
+  - 212.1
+  - 356.6
+  - -5.3
+  - -5.04
+  - 33.7
+  - 0.
+  image_size_x: 1920
+  image_size_y: 1080
+  fov: 110
+
+camera:
+  attach_transform:
+  - 2.
+  - 0.
+  - 2.
+  - 0.
+  - 0.
+  - 0.
+  image_size_x: 1920
+  image_size_y: 1080
+  fov: 110
+    
