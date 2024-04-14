@@ -4,6 +4,7 @@ import cv2
 import math
 from sort_TF import *
 from tensorflow.python.ops.numpy_ops import np_config
+from tqdm import tqdm
 #from yolov3.utils import pred_bbox
 
 np_config.enable_numpy_behavior()
