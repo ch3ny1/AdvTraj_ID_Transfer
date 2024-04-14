@@ -154,7 +154,7 @@ class AttackManager(object):
             spectator_transform.rotation.pitch = -20.
         self.spectator.set_transform(spectator_transform)
         attacker = self.attacker_walker
-        attacker.set_simulate_physics(False)
+        #attacker.set_simulate_physics(False)
         victim = self.victim_walker
 
         # Store images
@@ -327,7 +327,7 @@ class AttackManager(object):
             spectator_transform.rotation.pitch = -20.
         self.spectator.set_transform(spectator_transform)
         attacker = self.attacker_walker
-        attacker.set_simulate_physics(False)
+        #attacker.set_simulate_physics(False)
         victim = self.victim_walker
 
         # Store images
@@ -590,7 +590,7 @@ class AttackManager(object):
             spectator_transform.rotation.pitch = -20.
         self.spectator.set_transform(spectator_transform)
         attacker = self.attacker_walker
-        attacker.set_simulate_physics(False)
+        #attacker.set_simulate_physics(False)
         victim = self.victim_walker
 
         # Store images

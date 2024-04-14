@@ -4,6 +4,7 @@ import numpy as np
 import os
 from tensorflow.python.ops.numpy_ops import np_config
 from ID_Transfer.ID_Transfer import *
+from matplotlib.patches import FancyArrowPatch 
 
 def plot_sort_bbox_w_bkgrd(bboxes, image_dir, output_path, true_color=(255,0,0), post_color=(0,255,0),):
     """
@@ -93,3 +94,73 @@ def plot_sort_bbox(frames, attacking_frame=None, output_path='test.avi', true_co
         curr_frame += 1
         vidout.write(cv_im)
     vidout.release()
+
+def calculate_speed(bboxes, center_only=True):
+    if not center_only:
+        speeds = np.zeros(shape=(bboxes.shape[0]-1, bboxes.shape[1], 1))
+        for t, bbox in enumerate(bboxes):
+            if t==0:
+                pass
+            for i, bb in enumerate(bbox):
+                speed = (bb[2]+bb[0]) / 2 - (bboxes[t-1][i][2]+bboxes[t-1][i][0]) / 2
+                speeds[t-1,i,0] = speed
+    else:
+        speeds = np.zeros(shape=(bboxes.shape[0], bboxes.shape[2]-1, 1))
+        for i, centers in enumerate(bboxes):
+            for t in range(centers.shape[1]):
+                if t==0:
+                    pass
+                speed = math.sqrt((centers[0][t]-centers[0][t-1])**2 + (centers[1][t]-centers[1][t-1])**2)
+                speeds[i, t-1, 0] = speed
+                
+    return speeds
+
+def calculate_distance(bboxes, center_target=None, center_only=True):
+    if not center_only:
+        distance = np.zeros(shape=(bboxes.shape[0]-1))
+        for t, bbox in enumerate(bboxes):
+            if t==0:
+                pass
+            distance[t-1] = ((bbox[1,2]+bbox[1,2]) / 2) - ((bbox[0,2]+bbox[0,2]) / 2)
+    else:
+        distance = np.zeros(shape=(bboxes.shape[0], bboxes.shape[2]-1))
+        for i, centers in enumerate(bboxes):
+            for t in range(centers.shape[1]):
+                if t==0:
+                    pass
+                distance[i,t-1] = math.sqrt((center_target[t,0]-bboxes[i,0,t])**2+(center_target[t,1]-bboxes[i,1,t])**2)
+    return distance
+
+def calculate_velocity(bboxes, center_only=True):
+    if not center_only:
+        speeds = np.zeros(shape=(bboxes.shape[0]-1, bboxes.shape[1], 1))
+        for t, bbox in enumerate(bboxes):
+            if t==0:
+                pass
+            for i, bb in enumerate(bbox):
+                speed = (bb[2]+bb[0]) / 2 - (bboxes[t-1][i][2]+bboxes[t-1][i][0]) / 2
+                speeds[t-1,i,0] = speed
+    else:
+        speeds = np.zeros(shape=(bboxes.shape[0], bboxes.shape[2]-1, 2))
+        for i, centers in enumerate(bboxes):
+            for t in range(centers.shape[1]):
+                if t==0:
+                    pass
+                #speed = math.sqrt((centers[0][t]-centers[0][t-1])**2 + (centers[1][t]-centers[1][t-1])**2)
+                speeds[i, t-1, 0] = centers[0][t]-centers[0][t-1]
+                speeds[i, t-1, 1] = centers[1][t]-centers[1][t-1]
+                
+    return speeds
+
+def moving_average(data, window_size):
+    """Compute the moving average with a specified window size."""
+    return np.convolve(data, np.ones(window_size)/window_size, mode='valid')
+
+
+def arrow(x,y,ax,n):
+    d = len(x)//(n+1)    
+    ind = np.arange(d,len(x),d)
+    for i in ind:
+        ar = FancyArrowPatch ((x[i-1],y[i-1]),(x[i],y[i]), 
+                              arrowstyle='->', mutation_scale=10, alpha=0.5, zorder=0)
+        ax.add_patch(ar)
