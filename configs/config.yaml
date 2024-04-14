@@ -1,0 +1,73 @@
+world:
+  map: Town01
+  fixed_delta_seconds: 0.10
+
+simulation:
+  host: 'localhost'
+  port: 2000
+  max_frame: 130
+  lr: 0.1
+  iter: 5
+
+output_settings:
+  img_dir: E:\\ID-Switch-Sim-Output\\surveillance_ped_1_10\\imgs
+  bbox_dir: E:\\ID-Switch-Sim-Output\\surveillance_ped_1_10\\bboxes
+  config_dir: E:\\ID-Switch-Sim-Output\\surveillance_ped_1_10\\configs
+  traj_dir: E:\\ID-Switch-Sim-Output\\surveillance_ped_1_10\\trajs
+
+
+victim:
+  blueprint: walker.pedestrian.0001
+  spawn_transform:
+  - 85.4
+  - 159.6
+  - 0.777042 # z
+  - 0. # pitch
+  - 0. # yaw
+  - 0. # roll
+  init_speed: 
+  - 1 # x-axis
+  - 0 # y-axis
+  - 0 # z-axis
+  - 1.1 # m/s
+
+attacker:
+  blueprint: walker.pedestrian.0001
+  spawn_transform:
+  - 83.33
+  - 172.57
+  - 0.777042 # z
+  - 0. # pitch
+  - 0. # yaw
+  - 0. # roll
+
+camera:
+  attach_transform:
+  - 1.5
+  - 0.
+  - 1.2
+  - 0.
+  - 0.
+  - 0.
+  transform:
+  - 244.429169
+  - 194.779251
+  - 1.411827
+  - -1.565951
+  - -180.
+  - 0.
+  image_size_x: 1920
+  image_size_y: 1080
+  fov: 110
+    
+surveillance_camera:
+  transform:
+  - 211.75
+  - 243.86
+  - 10.1
+  - -24.63
+  - 38.60
+  - 0.
+  image_size_x: 1920
+  image_size_y: 1080
+  fov: 110
