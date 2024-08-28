@@ -7,7 +7,7 @@ simulation:
   port: 2000
   max_frame: 130
   lr: 0.1
-  iter: 5
+  iter: 20
 
 output_settings:
   img_dir: E:\\ID-Switch-Sim-Output\\surveillance_ped_1_10\\imgs
@@ -26,9 +26,9 @@ victim:
   - 0. # yaw
   - 0. # roll
   init_speed: 
-  - 1 # x-axis
-  - 0 # y-axis
-  - 0 # z-axis
+  - 1. # x-axis
+  - 0. # y-axis
+  - 0. # z-axis
   - 1.1 # m/s
 
 attacker:

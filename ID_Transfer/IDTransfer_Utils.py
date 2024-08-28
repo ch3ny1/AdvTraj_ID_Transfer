@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 import cv2
 import math
-from sort_TF import *
+from ID_Transfer.sort_TF import *
 from tensorflow.python.ops.numpy_ops import np_config
 from tqdm import tqdm
 #from yolov3.utils import pred_bbox
@@ -567,14 +567,6 @@ def plot_yolo_sort_bbox(yolo, n_frames, dir=None, vname=VNAME, include_center_id
 
         vidout.write(cv_im)
     vidout.release()
-
-def get_yolo_bbox(Yolo, dir, n_frames):
-    bboxes = []
-    for frame in range(n_frames):
-        img = cv2.imread(dir+'\\{}.png'.format(frame))
-        bbox = pred_bbox(Yolo, img)[...,:4]
-        bboxes.append(bbox)
-    return bboxes
 
 def generate_traj(target_move, attacker_spawn_range=(0,960,0,360), s=2400, r=1.5, stop_pos=None, seed=None):
     """

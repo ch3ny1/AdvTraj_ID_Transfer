@@ -7,7 +7,7 @@ simulation:
   port: 2000
   max_frame: 220
   lr: 0.1
-  iter: 5
+  iter: 20
 
 output_settings:
   img_dir: E:\\ID-Switch-Sim-Output\\vehicle\\imgs

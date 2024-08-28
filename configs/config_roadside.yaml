@@ -7,7 +7,7 @@ simulation:
   port: 2000
   max_frame: 130
   lr: 0.1
-  iter: 5
+  iter: 20
 
 output_settings:
   img_dir: D:\\ID-Switch-Sim-Output\\roadside_var_appearance\\1_1\\imgs
@@ -39,8 +39,8 @@ victim:
   - -90. # yaw
   - 0. # roll
   init_speed: 
-  - 1 # x-axis
-  - 0 # y-axis
+  - 0 # x-axis
+  - -1 # y-axis
   - 0 # z-axis
   - 1.1 # m/s
 

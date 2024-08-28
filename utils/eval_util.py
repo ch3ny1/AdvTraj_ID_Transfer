@@ -12,7 +12,7 @@ class SettingsRandomizer(object):
         self.ego_speed_range = None # [low, high]
         self.victim_spawn_number = 5
         self.attacker_spawn_number = 5
-        self.ego_speed_number = 5
+        self.ego_speed_number = 1
 
     def generate_settings(self, seed=2023):
         """
@@ -125,4 +125,29 @@ class SettingsRandomizer(object):
             settings_list.append(subsettings)
             
         
+        return settings_list
+    
+    def generate_baseline_vehicle(self, speed_limit=(.5, 2.), seed=2023):
+        """
+        Generate settings representing the baseline.
+        Victim spawn location is randomized, and the attacker spawn location and speed
+        is generated such that its trajectory intersects the victim's trajectory
+        """
+        np.random.seed(seed)
+        settings = self.settings
+        victim_spawn_z_rotation = settings['victim']['spawn_transform'][2:]
+        attacker_spawn_z_rotation = settings['attacker']['spawn_transform'][2:]
+        victim_spawn_location = []
+        settings_list = []
+        for i in range(self.victim_spawn_number):
+            subsettings = copy.deepcopy(settings)
+            x_v = np.random.uniform(self.victim_spawn_range[0], self.victim_spawn_range[1])
+            y_v = np.random.uniform(self.victim_spawn_range[2], self.victim_spawn_range[3])
+            subsettings['victim']['spawn_transform'] = [x_v,y_v] + victim_spawn_z_rotation
+            x = np.random.uniform(self.attacker_spawn_range[0], self.attacker_spawn_range[1])
+            y = np.random.uniform(self.attacker_spawn_range[2], self.attacker_spawn_range[3])
+            subsettings['attacker']['spawn_transform'] = [x, y] + attacker_spawn_z_rotation
+            speed = np.sign(y_v-y) * np.random.uniform(speed_limit[0], speed_limit[1])
+            subsettings['attacker']['init_speed'] = [0., speed, 0., speed]
+            settings_list.append(subsettings)
         return settings_list

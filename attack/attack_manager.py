@@ -213,8 +213,7 @@ class AttackManager(object):
             camera_transform.location = camera_transform.location + vehicle_delta_location
             world_2_camera_curr = tf.constant(camera_transform.get_inverse_matrix(), dtype=tf.float32)
             # Victim actual bbox at t
-            victim_noise = [np.random.normal(0., .5), np.random.normal(0., 1.)]
-            #victim_noise = [0., 0.]
+            victim_noise = [np.random.normal(0., 1.), np.random.normal(0., 2.)]
             victim_curr = get_2d_bbox_with_shift(victim, self.proj_mat, world_2_camera_curr, victim_delta_location)
             #print(victim_curr)
             victim_curr = self.add_bbox_noise(victim_curr, victim_noise)
@@ -380,7 +379,7 @@ class AttackManager(object):
             camera_transform = self.camera_actor.get_transform()
             world_2_camera_curr = tf.constant(camera_transform.get_inverse_matrix(), dtype=tf.float32)
             # Victim actual bbox at t
-            victim_noise = [np.random.normal(0., .5), np.random.normal(0., 1.)]
+            victim_noise = [np.random.normal(0., 1.), np.random.normal(0., 2.)]
             victim_curr = get_2d_bbox_with_shift(victim, self.proj_mat, world_2_camera_curr, victim_delta_location)
             #print(victim_curr)
             victim_curr = self.add_bbox_noise(victim_curr, victim_noise)
@@ -422,7 +421,8 @@ class AttackManager(object):
                 #attacker_control = carla.WalkerControl(direction, speed)
                 target_location = attacker.get_location() + direction
                 target_location.z = attacker.get_location().z
-                attacker.set_location(target_location)
+                attacker.set_transform(carla.Transform(location=target_location, rotation=victim.get_transform().rotation))
+                #attacker.set_location(target_location)
 
                 self.world.tick()
 
@@ -464,7 +464,161 @@ class AttackManager(object):
                 count += 1
 
         return switched
-    
+
+
+    def run_attack_3d_surveillance(self, settings=None, higher_view = False, save_imgs_bboxes = False):
+        if settings is None:
+            settings = self.settings
+        else:
+            self.setup_carla(settings)
+        # Spawn the actors
+        if 'surveillance_camera' in settings:
+            self.spawn_surveillance_camera(settings)
+        self.spawn_victim(settings)
+        self.spawn_attacker(settings)
+        spectator_transform = self.camera_actor.get_transform()
+        if higher_view:
+            spectator_transform.location.z = spectator_transform.location.z + 3.
+            spectator_transform.rotation.pitch = -20.
+        self.spectator.set_transform(spectator_transform)
+        attacker = self.attacker_walker
+        attacker.set_simulate_physics(False)
+        victim = self.victim_walker
+
+        # Store images
+        image_queue = queue.Queue()
+        self.camera_actor.listen(image_queue.put)
+
+
+        self.world.tick()
+
+        # Save bboxes
+        world_2_camera = np.array(self.camera_actor.get_transform().get_inverse_matrix())
+        bboxes = [[get_2d_bbox(self.victim_walker, self.proj_mat, world_2_camera)], \
+                  [get_2d_bbox(self.attacker_walker, self.proj_mat, world_2_camera)]] # [[victim], [attacker]]
+        
+        # Store trajectories
+        victim_traj = [transform_to_list(victim.get_transform())]
+        attacker_traj = [transform_to_list(attacker.get_transform())]
+
+        # Movement for the ego vehicle and victim walker
+        victim_control = list_to_walkercontrol(settings['victim']['init_speed'])
+
+        # Record some useful constants
+        victim_delta_location = victim_control.direction * victim_control.speed * settings['world']['fixed_delta_seconds']
+
+        # Initialize KF trackers for attack
+        victim_tracker = KalmanBoxTracker(bboxes[0][0])
+        attacker_tracker = KalmanBoxTracker(bboxes[1][0])
+
+        # Create variable for optimization
+        #attacker_states = tf.Variable(convert_bbox_to_z(bboxes[1][0])[:3])
+        switched = False
+
+        # Start the attack
+        for i in range(1, settings['simulation']['max_frame']):
+            victim_traj.append(transform_to_list(victim.get_transform()))
+            attacker_traj.append(transform_to_list(attacker.get_transform()))
+            spectator_transform = self.camera_actor.get_transform()
+            if higher_view:
+                spectator_transform.location.z = spectator_transform.location.z + 3.
+                spectator_transform.rotation.pitch = -20.
+            self.spectator.set_transform(spectator_transform)
+            self.victim_walker.apply_control(victim_control)
+
+            # Victim KF predicted bbox at t
+            victim_pred = victim_tracker.predict_no_trace()[0]
+            # Attacker KF predicted bbox at t
+            attakcer_pred = attacker_tracker.predict_no_trace()[0]
+            # Get current w2c
+            camera_transform = self.camera_actor.get_transform()
+            world_2_camera_curr = tf.constant(camera_transform.get_inverse_matrix(), dtype=tf.float32)
+            # Victim actual bbox at t
+            victim_noise = [np.random.normal(0., 1.), np.random.normal(0., 2.)]
+            victim_curr = get_2d_bbox_with_shift(victim, self.proj_mat, world_2_camera_curr, victim_delta_location)
+            #print(victim_curr)
+            victim_curr = self.add_bbox_noise(victim_curr, victim_noise)
+            #print("perturbed: {}".format(victim_curr))
+            
+            # Attacker actual bbox at t
+            attacker_curr = bboxes[1][-1]
+            ious = iou_batch([victim_curr, attacker_curr], [victim_pred, attakcer_pred])
+            # For debug and see results in numerical fashion
+            #print(ious)
+            if ious[0,0] + ious[1,1] < ious[0,1] + ious[1,0] or switched: # ID already switched
+                switched = True
+                attacker.apply_control(WalkerControl(Vector3D(0,0,0), 0))
+
+                self.world.tick()
+
+                world_2_camera = np.array(self.camera_actor.get_transform().get_inverse_matrix())
+                victim_bbox = get_2d_bbox(victim, self.proj_mat, world_2_camera)
+                victim_bbox = self.add_bbox_noise(victim_bbox, victim_noise)
+                attacker_bbox = get_2d_bbox(attacker, self.proj_mat, world_2_camera)
+                bboxes[0].append(victim_bbox)
+                bboxes[1].append(attacker_bbox)
+                victim_tracker.predict()
+                attacker_tracker.predict()
+                victim_tracker.update(attacker_bbox)
+                attacker_tracker.update(victim_bbox)
+            else:
+                # Attacker 3D bbox (8 vertices) at t
+                attacker_3d_bbox = get_verts(attacker)
+                # How far we should move
+                center_displacement = optimize_3d_coord(attacker_tracker, victim_tracker, attacker_3d_bbox, victim_curr, \
+                                                        self.proj_mat, world_2_camera_curr, lr=settings['simulation']['lr'], \
+                                                        iteration=settings['simulation']['iter'], delta_location=self.attacker_movement_limit)
+                #print(center_displacement)
+                direction = carla.Vector3D(center_displacement[0].item(), center_displacement[1].item(), 0.)
+                speed = np.linalg.norm(center_displacement) / self.fixed_delta_seconds
+                if speed > self.attacker_speed_limit:
+                    speed = self.attacker_speed_limit
+                #attacker_control = carla.WalkerControl(direction, speed)
+                target_location = attacker.get_location() + direction
+                target_location.z = attacker.get_location().z
+                attacker.set_transform(carla.Transform(location=target_location, rotation=victim.get_transform().rotation))
+                #attacker.set_location(target_location)
+
+                self.world.tick()
+
+                world_2_camera = np.array(self.camera_actor.get_transform().get_inverse_matrix())
+                victim_bbox = get_2d_bbox(victim, self.proj_mat, world_2_camera)
+                victim_bbox = self.add_bbox_noise(victim_bbox, victim_noise)
+                attacker_bbox = get_2d_bbox(attacker, self.proj_mat, world_2_camera)
+                bboxes[0].append(victim_bbox)
+                bboxes[1].append(attacker_bbox)
+                victim_tracker.predict()
+                attacker_tracker.predict()
+                victim_tracker.update(victim_bbox)
+                attacker_tracker.update(attacker_bbox)
+
+        self.cleanup()
+        # Write image files and bboxes to disk
+        if switched and save_imgs_bboxes==True:
+            current_time = datetime.now()
+            current_time = current_time.strftime("%Y_%m_%d_%H_%M_%S")
+            scenario_name = current_time
+            img_dir = os.path.join(settings['output_settings']['img_dir'], scenario_name)
+            if not os.path.exists(img_dir):
+                os.makedirs(img_dir)
+            bbox_dir = settings['output_settings']['bbox_dir']
+            config_dir = settings['output_settings']['config_dir']
+            traj_dir = settings['output_settings']['traj_dir']
+            #config_dir = r'D:\ID-Switch-Sim-Output\surveillance_diff\configs'
+
+            np.save(os.path.join(bbox_dir, '{}.npy'.format(scenario_name)), np.array(bboxes))
+            np.save(os.path.join(traj_dir, '{}.npy'.format(scenario_name)), np.array([victim_traj, attacker_traj]))
+            save_yaml(settings, os.path.join(config_dir, '{}.yaml'.format(scenario_name)))
+            count = 0
+            print("Saving images")
+            while image_queue.empty() != True:
+                img = image_queue.get()
+                #img.save_to_disk(os.path.join(img_dir, '{}.jpg'.format(count)))
+                img = np.reshape(np.copy(img.raw_data), (settings['surveillance_camera']['image_size_y'], settings['surveillance_camera']['image_size_x'], 4))
+                cv2.imwrite(os.path.join(img_dir, '{}.jpg'.format(count)), img)
+                count += 1
+
+        return switched
 
     def collect_baseline(self, settings=None, higher_view=False, save_img_bbox=False):
         """
@@ -502,7 +656,7 @@ class AttackManager(object):
         # Movement for the ego vehicle and victim walker
         victim_control = list_to_walkercontrol(settings['victim']['init_speed'])
         attacker_control = list_to_walkercontrol(settings['attacker']['init_speed'])
-        victim_noise = [np.random.normal(0., .5), np.random.normal(0., 1.)] # Noise on pixel level
+        victim_noise = [np.random.normal(0., 1.), np.random.normal(0., 2.)] # Noise on pixel level
 
         # Initialize KF trackers for attack
         victim_tracker = KalmanBoxTracker(bboxes[0][0])
@@ -647,8 +801,8 @@ class AttackManager(object):
             camera_transform.location = camera_transform.location
             world_2_camera_curr = tf.constant(camera_transform.get_inverse_matrix(), dtype=tf.float32)
             # Victim actual bbox at t
-            victim_noise = [np.random.normal(0., 3.), np.random.normal(0., 1.5)]
-            noise2 = [np.random.normal(0., 3.), np.random.normal(0., 1.5)]
+            victim_noise = [np.random.normal(0., 5.), np.random.normal(0., 1.5)]
+            noise2 = [np.random.normal(0., 5.), np.random.normal(0., 1.5)]
             victim_curr = get_2d_bbox_with_shift(victim, self.proj_mat, world_2_camera_curr, victim_delta_location)
             victim_curr = self.add_bbox_noise(victim_curr, victim_noise, noise2)
             
@@ -690,23 +844,6 @@ class AttackManager(object):
                 #attacker_control = carla.WalkerControl(direction, speed)
                 if attacker_direction.dot(direction) < 0:
                     direction = carla.Vector3D(0,0,0)
-                    """
-                    switched = True
-                    attacker.apply_control(carla.VehicleControl(brake=1.0))
-
-                    self.world.tick()
-
-                    world_2_camera = np.array(self.camera_actor.get_transform().get_inverse_matrix())
-                    victim_bbox = get_2d_bbox(victim, self.proj_mat, world_2_camera)
-                    victim_bbox = self.add_bbox_noise(victim_bbox, victim_noise)
-                    attacker_bbox = get_2d_bbox(attacker, self.proj_mat, world_2_camera)
-                    bboxes[0].append(victim_bbox)
-                    bboxes[1].append(attacker_bbox)
-                    victim_tracker.predict()
-                    attacker_tracker.predict()
-                    victim_tracker.update(attacker_bbox)
-                    attacker_tracker.update(victim_bbox)
-                    """
                 elif abs(direction.x) >= self.attacker_speed_limit:
                     direction.x = math.copysign(self.attacker_speed_limit, direction.x)
                 target_location = attacker.get_location() + direction
