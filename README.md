@@ -4,6 +4,15 @@ Code has been conveniently put into Jupyter Notebooks and can be run within. The
 
 ## Prepare environment (Python=3.8.X)
 
+We recommned using Conda for easier package management. To create a virtual environment, you can use:
+
+```
+conda create -n advtraj python=3.8
+conda activate advtraj
+```
+
+Then, run the following command to install required dependancies.
+
 ```
 pip install -r requirements.txt
 ```
