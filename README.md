@@ -11,6 +11,8 @@ conda create -n advtraj python=3.8
 conda activate advtraj
 ```
 
+It is recommended to follow the official guidelines to install Tensorflow 2.6.0 with GPU support: https://www.tensorflow.org/install/pip#conda
+
 Then, run the following command to install required dependancies.
 
 ```
