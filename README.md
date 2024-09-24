@@ -21,10 +21,10 @@ pip install -r requirements.txt
 
 ## Adversarial Trajectories in 2D
 
-For adversarial trajectories generation on 2D plane and plot the corresponding patterns, run code chunks in `random_traj_gen_2D.ipynb`.
+For adversarial trajectories generation on 2D plane and plot the corresponding patterns, run code chunks in `random_traj_gen_2D.ipynb`. It generates a target moving straight and spawns the attacker at an random position above the target. For each simulation, at each time step the target moves while the attacker optimizes for its trajectory to transfer its ID to the target. An aggregated trajectories will be plotted for various runs of the simulation. Also, the decomposition of x and y speed that helps understand the pattern behind the adversarial trajectories follow.
 
 ## CARLA Simulation
 
 Firstly, follow instructions at: https://carla.readthedocs.io/en/0.9.14/start_quickstart/ to install CARLA 0.9.14.
 
-Next, start CARLA and execute the code chunks in ipynb files starts with attack/baseline to obtain attack success rates against SORT.
+Next, start CARLA and execute the code chunks in ipynb files starts with attack/baseline to obtain attack success rates against SORT. For each of the scenarios, both the target and attacker are spawned at random positions within approriate range (defined in yaml config). At each time step, the attacker moves to the optimized location and attempts to transfer its ID to the target. The attacker stops movement once the attack is successful.
